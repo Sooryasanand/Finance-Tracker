@@ -7,32 +7,32 @@ A comprehensive iOS personal finance management application built with SwiftUI, 
 ### Dashboard
 
 <img src="screenshots/dashboard.png" alt="Dashboard" width="300"/>
-_Main dashboard showing balance, income, expenses, and budget overview_
+Main dashboard showing balance, income, expenses, and budget overview
 
 ### Add Transaction
 
 <img src="screenshots/add-transaction.png" alt="Dashboard" width="300"/>
-_Add new income or expense transactions with categories_
+Add new income or expense transactions with categories
 
 ### Transactions List
 
 <img src="screenshots/transactions.png" alt="Dashboard" width="300"/>
-_View and manage all your financial transactions_
+View and manage all your financial transactions
 
 ### Budget Management
 
 <img src="screenshots/budgets.png" alt="Dashboard" width="300"/>
-_Set up and track spending budgets by category_
+Set up and track spending budgets by category
 
 ### Settings & Features
 
 <img src="screenshots/settings.png" alt="Dashboard" width="300"/>
-_Comprehensive settings with export, sync, and security options_
+Comprehensive settings with export, sync, and security options
 
 ### Siri Shortcuts (Demo)
 
 <img src="screenshots/siri-shortcuts.png" alt="Dashboard" width="300"/>
-_Voice commands and quick actions with Siri integration_
+Voice commands and quick actions with Siri integration
 
 ## ✨ Features
 
@@ -282,4 +282,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Made with ❤️ using SwiftUI and Core Data**
 
-_This app is designed to help you take control of your finances with a beautiful, secure, and intuitive interface._
+This app is designed to help you take control of your finances with a beautiful, secure, and intuitive interface.
