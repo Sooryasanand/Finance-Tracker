@@ -16,23 +16,22 @@ _Add new income or expense transactions with categories_
 
 ### Transactions List
 
-<img src="screenshots/transactions.png" alt="Dashboard" width="400"/>
+<img src="screenshots/transactions.png" alt="Dashboard" width="200"/>
 _View and manage all your financial transactions_
 
 ### Budget Management
 
-<img src="screenshots/budgets.png" alt="Dashboard" width="400"/>
+<img src="screenshots/budgets.png" alt="Dashboard" width="200"/>
 _Set up and track spending budgets by category_
 
 ### Settings & Features
 
-<img src="screenshots/settings.png" alt="Dashboard" width="400"/>
+<img src="screenshots/settings.png" alt="Dashboard" width="200"/>
 _Comprehensive settings with export, sync, and security options_
 
 ### Siri Shortcuts (Demo)
 
-![Siri Shortcuts](screenshots/siri-shortcuts.png)
-<img src="screenshots/siri-shortcuts.png" alt="Dashboard" width="400"/>
+<img src="screenshots/siri-shortcuts.png" alt="Dashboard" width="200"/>
 _Voice commands and quick actions with Siri integration_
 
 ## ✨ Features
