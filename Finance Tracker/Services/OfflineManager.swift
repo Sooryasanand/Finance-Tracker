@@ -29,6 +29,14 @@ class OfflineManager: ObservableObject {
         loadPendingSyncCount()
     }
     
+    // MARK: - Public Methods
+    
+    func startMonitoring() {
+        // Network monitoring is already started in init()
+        // This method can be used for additional setup if needed
+        print("OfflineManager: Network monitoring is active")
+    }
+    
     // MARK: - Network Monitoring
     
     private func setupNetworkMonitoring() {
@@ -142,7 +150,7 @@ class OfflineManager: ObservableObject {
             transaction.type = type
             transaction.category = category
             transaction.user = user
-            transaction.notes = notes
+            transaction.note = notes
             transaction.date = date
             transaction.createdAt = Date()
             transaction.updatedAt = Date()
@@ -183,7 +191,7 @@ class OfflineManager: ObservableObject {
             }
             
             if let notes = notes {
-                transaction.notes = notes
+                transaction.note = notes
             }
             
             if let date = date {

@@ -3,35 +3,71 @@ import CoreData
 
 struct DashboardView: View {
     @StateObject private var viewModel = DashboardViewModel()
+    @EnvironmentObject private var appStateManager: AppStateManager
     @State private var showingAddTransaction = false
+    @State private var showingReceiptScanner = false
     
     var body: some View {
         NavigationView {
-            ScrollView {
-                VStack(spacing: 20) {
-                    // Balance Card
-                    BalanceCardView(
-                        balance: viewModel.totalBalance,
-                        income: viewModel.totalIncome,
-                        expenses: viewModel.totalExpenses
-                    )
-                    
-                    // Quick Actions
-                    QuickActionsView(showingAddTransaction: $showingAddTransaction)
-                    
-                    // Recent Transactions
-                    RecentTransactionsView(transactions: viewModel.recentTransactions)
-                    
-                    // Budget Overview
-                    BudgetOverviewView(budgets: viewModel.budgetOverviews)
-                    
-                    Spacer()
+            ZStack {
+                if viewModel.isLoading {
+                    LoadingView()
+                } else {
+                    ScrollView {
+                        LazyVStack(spacing: 20) {
+                            // Balance Card
+                            BalanceCardView(
+                                balance: viewModel.totalBalance,
+                                income: viewModel.totalIncome,
+                                expenses: viewModel.totalExpenses
+                            )
+                            
+                            // Quick Actions
+                            QuickActionsView(
+                                showingAddTransaction: $showingAddTransaction,
+                                showingReceiptScanner: $showingReceiptScanner
+                            )
+                            
+                            // Recent Transactions
+                            if !viewModel.recentTransactions.isEmpty {
+                                RecentTransactionsView(transactions: viewModel.recentTransactions)
+                            }
+                            
+                            // Budget Overview
+                            if !viewModel.budgetOverviews.isEmpty {
+                                BudgetOverviewView(budgets: viewModel.budgetOverviews)
+                            }
+                            
+                            Spacer(minLength: 100)
+                        }
+                        .padding()
+                    }
                 }
-                .padding()
             }
             .navigationTitle("Dashboard")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: {
+                        viewModel.refreshData()
+                    }) {
+                        Image(systemName: "arrow.clockwise")
+                            .foregroundColor(.primary)
+                    }
+                    .disabled(viewModel.isLoading)
+                }
+            }
             .sheet(isPresented: $showingAddTransaction) {
                 AddTransactionView()
+            }
+            .sheet(isPresented: $showingReceiptScanner) {
+                ReceiptScannerView(
+                    isPresented: $showingReceiptScanner,
+                    onReceiptScanned: { receiptData in
+                        // Handle scanned receipt data
+                        print("Receipt scanned: \(receiptData)")
+                    }
+                )
             }
             .onAppear {
                 viewModel.loadData()
@@ -39,9 +75,20 @@ struct DashboardView: View {
             .refreshable {
                 viewModel.refreshData()
             }
+            .alert("Error", isPresented: .constant(viewModel.errorMessage != nil)) {
+                Button("OK") {
+                    viewModel.errorMessage = nil
+                }
+            } message: {
+                if let errorMessage = viewModel.errorMessage {
+                    Text(errorMessage)
+                }
+            }
         }
     }
 }
+
+// MARK: - Balance Card View
 
 struct BalanceCardView: View {
     let balance: Decimal
@@ -49,7 +96,7 @@ struct BalanceCardView: View {
     let expenses: Decimal
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Text("Total Balance")
                     .font(.headline)
@@ -57,17 +104,23 @@ struct BalanceCardView: View {
                 Spacer()
                 Image(systemName: "eye")
                     .foregroundColor(.secondary)
+                    .font(.caption)
             }
             
             Text(balance.currencyFormatted)
-                .font(.largeTitle)
-                .fontWeight(.bold)
+                .font(.system(size: 32, weight: .bold, design: .rounded))
+                .foregroundColor(balance >= 0 ? .primary : .red)
             
-            HStack {
-                VStack(alignment: .leading) {
-                    Text("Income")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+            HStack(spacing: 20) {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Image(systemName: "arrow.down.circle.fill")
+                            .foregroundColor(.green)
+                            .font(.caption)
+                        Text("Income")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
                     Text(income.currencyFormatted)
                         .font(.subheadline)
                         .fontWeight(.semibold)
@@ -76,10 +129,15 @@ struct BalanceCardView: View {
                 
                 Spacer()
                 
-                VStack(alignment: .trailing) {
-                    Text("Expenses")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                VStack(alignment: .trailing, spacing: 4) {
+                    HStack {
+                        Text("Expenses")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Image(systemName: "arrow.up.circle.fill")
+                            .foregroundColor(.red)
+                            .font(.caption)
+                    }
                     Text(expenses.currencyFormatted)
                         .font(.subheadline)
                         .fontWeight(.semibold)
@@ -87,34 +145,30 @@ struct BalanceCardView: View {
                 }
             }
         }
-        .padding()
+        .padding(20)
         .background(Color(.systemBackground))
-        .cornerRadius(12)
-        .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
+        .cornerRadius(16)
+        .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 4)
     }
 }
 
+// MARK: - Quick Actions View
+
 struct QuickActionsView: View {
     @Binding var showingAddTransaction: Bool
+    @Binding var showingReceiptScanner: Bool
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Quick Actions")
                 .font(.headline)
+                .foregroundColor(.primary)
             
-            HStack(spacing: 15) {
+            HStack(spacing: 12) {
                 QuickActionButton(
-                    title: "Add Income",
+                    title: "Add Transaction",
                     icon: "plus.circle.fill",
-                    color: .green
-                ) {
-                    showingAddTransaction = true
-                }
-                
-                QuickActionButton(
-                    title: "Add Expense",
-                    icon: "minus.circle.fill",
-                    color: .red
+                    color: .blue
                 ) {
                     showingAddTransaction = true
                 }
@@ -122,9 +176,17 @@ struct QuickActionsView: View {
                 QuickActionButton(
                     title: "Scan Receipt",
                     icon: "camera.fill",
-                    color: .blue
+                    color: .green
                 ) {
-                    // TODO: Implement receipt scanning
+                    showingReceiptScanner = true
+                }
+                
+                QuickActionButton(
+                    title: "Add Budget",
+                    icon: "chart.pie.fill",
+                    color: .orange
+                ) {
+                    // Navigate to add budget
                 }
             }
         }
@@ -147,16 +209,19 @@ struct QuickActionButton: View {
                 Text(title)
                     .font(.caption)
                     .fontWeight(.medium)
+                    .foregroundColor(.primary)
                     .multilineTextAlignment(.center)
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
+            .padding(.vertical, 16)
             .background(Color(.systemGray6))
-            .cornerRadius(10)
+            .cornerRadius(12)
         }
         .buttonStyle(PlainButtonStyle())
     }
 }
+
+// MARK: - Recent Transactions View
 
 struct RecentTransactionsView: View {
     let transactions: [Transaction]
@@ -164,30 +229,29 @@ struct RecentTransactionsView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("Today's Transactions")
+                Text("Recent Transactions")
                     .font(.headline)
+                    .foregroundColor(.primary)
+                
                 Spacer()
-                NavigationLink("See All", destination: TransactionsView())
-                    .font(.subheadline)
-                    .foregroundColor(.blue)
+                
+                NavigationLink("See All") {
+                    TransactionsView()
+                }
+                .font(.caption)
+                .foregroundColor(.blue)
             }
             
-            if transactions.isEmpty {
-                Text("No transactions today")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.vertical, 20)
-            } else {
-                LazyVStack(spacing: 8) {
-                    ForEach(transactions, id: \.id) { transaction in
-                        TransactionRowView(transaction: transaction)
-                    }
+            LazyVStack(spacing: 8) {
+                ForEach(transactions.prefix(5), id: \.id) { transaction in
+                    TransactionRowView(transaction: transaction)
                 }
             }
         }
     }
 }
+
+// MARK: - Budget Overview View
 
 struct BudgetOverviewView: View {
     let budgets: [DashboardViewModel.BudgetOverview]
@@ -197,30 +261,44 @@ struct BudgetOverviewView: View {
             HStack {
                 Text("Budget Overview")
                     .font(.headline)
+                    .foregroundColor(.primary)
+                
                 Spacer()
-                NavigationLink("Manage", destination: BudgetsView())
-                    .font(.subheadline)
-                    .foregroundColor(.blue)
+                
+                NavigationLink("See All") {
+                    BudgetsView()
+                }
+                .font(.caption)
+                .foregroundColor(.blue)
             }
             
-            if budgets.isEmpty {
-                Text("No active budgets")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.vertical, 20)
-            } else {
-                LazyVStack(spacing: 8) {
-                    ForEach(budgets, id: \.id) { budget in
-                        BudgetProgressCard(budget: budget)
-                    }
+            LazyVStack(spacing: 12) {
+                ForEach(budgets.prefix(3)) { budget in
+                    BudgetProgressCard(budget: budget)
                 }
             }
         }
     }
 }
 
+// MARK: - Loading View
+
+struct LoadingView: View {
+    var body: some View {
+        VStack(spacing: 16) {
+            ProgressView()
+                .scaleEffect(1.2)
+            
+            Text("Loading dashboard...")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+        }
+    }
+}
+
+// MARK: - Preview
+
 #Preview {
     DashboardView()
-        .environment(\.managedObjectContext, CoreDataStack.shared.context)
+        .environmentObject(AppStateManager.shared)
 }

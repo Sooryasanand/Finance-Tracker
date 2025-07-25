@@ -174,7 +174,7 @@ class TransactionsViewModel: ObservableObject {
         if !searchText.isEmpty {
             filtered = filtered.filter { transaction in
                 let categoryName = transaction.category?.name?.lowercased() ?? ""
-                let notes = transaction.notes?.lowercased() ?? ""
+                let notes = transaction.note?.lowercased() ?? ""
                 let searchLower = searchText.lowercased()
                 
                 return categoryName.contains(searchLower) || notes.contains(searchLower)

@@ -18,8 +18,8 @@ struct TransactionRowView: View {
                     .font(.headline)
                     .fontWeight(.medium)
                 
-                if let notes = transaction.notes, !notes.isEmpty {
-                    Text(notes)
+                if let note = transaction.note, !note.isEmpty {
+                    Text(note)
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .lineLimit(1)

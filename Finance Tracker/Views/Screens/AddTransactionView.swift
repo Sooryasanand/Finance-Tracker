@@ -11,88 +11,10 @@ struct AddTransactionView: View {
     var body: some View {
         NavigationView {
             Form {
-                Section {
-                    // Transaction Type Picker
-                    Picker("Type", selection: $viewModel.selectedType) {
-                        ForEach(AddTransactionViewModel.TransactionType.allCases, id: \.self) { type in
-                            HStack {
-                                Image(systemName: type.icon)
-                                    .foregroundColor(type.color)
-                                Text(type.displayName)
-                            }
-                            .tag(type)
-                        }
-                    }
-                    .pickerStyle(SegmentedPickerStyle())
-                    
-                    // Amount Input
-                    HStack {
-                        Text("Amount")
-                        Spacer()
-                        Text("$")
-                            .foregroundColor(.secondary)
-                        TextField("0.00", text: $viewModel.amount)
-                            .keyboardType(.decimalPad)
-                            .multilineTextAlignment(.trailing)
-                    }
-                }
-                
-                Section {
-                    // Category Selection
-                    Button(action: { showingCategoryPicker = true }) {
-                        HStack {
-                            Text("Category")
-                                .foregroundColor(.primary)
-                            
-                            Spacer()
-                            
-                            if let category = viewModel.selectedCategory {
-                                HStack(spacing: 8) {
-                                    Image(systemName: category.icon ?? "folder")
-                                        .foregroundColor(Color(hex: category.color ?? "#007AFF"))
-                                    
-                                    Text(category.name ?? "Unknown")
-                                        .foregroundColor(.secondary)
-                                }
-                            } else {
-                                Text("Select Category")
-                                    .foregroundColor(.secondary)
-                            }
-                            
-                            Image(systemName: "chevron.right")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                    
-                    // Date Picker
-                    DatePicker("Date", selection: $viewModel.date, displayedComponents: [.date, .hourAndMinute])
-                }
-                
-                Section("Receipt") {
-                    Button(action: { showingReceiptScanner = true }) {
-                        HStack {
-                            Image(systemName: "camera.fill")
-                                .foregroundColor(.blue)
-                            
-                            Text("Scan Receipt")
-                                .foregroundColor(.primary)
-                            
-                            Spacer()
-                            
-                            Image(systemName: "chevron.right")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                } footer: {
-                    Text("Scan a receipt to automatically extract transaction details")
-                }
-                
-                Section("Notes") {
-                    TextField("Add a note (optional)", text: $viewModel.notes, axis: .vertical)
-                        .lineLimit(3...6)
-                }
+                transactionTypeSection
+                categoryAndDateSection
+                receiptSection
+                notesSection
             }
             .navigationTitle("Add Transaction")
             .navigationBarTitleDisplayMode(.inline)
@@ -122,17 +44,15 @@ struct AddTransactionView: View {
                     handleScannedReceipt(receiptData)
                 }
             }
-            .overlay(
-                Group {
-                    if viewModel.isLoading {
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle())
-                            .scaleEffect(1.2)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .background(Color.black.opacity(0.1))
-                    }
+            .overlay {
+                if viewModel.isLoading {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle())
+                        .scaleEffect(1.2)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(Color.black.opacity(0.1))
                 }
-            )
+            }
             .alert("Error", isPresented: .constant(viewModel.errorMessage != nil)) {
                 Button("OK") {
                     viewModel.errorMessage = nil
@@ -144,12 +64,98 @@ struct AddTransactionView: View {
             }
         }
     }
+
     
     private func saveTransaction() {
         viewModel.saveTransaction { success in
             if success {
                 dismiss()
             }
+        }
+    }
+    
+    private var selectedCategoryView: some View {
+        Group {
+            if let category = viewModel.selectedCategory {
+                HStack(spacing: 8) {
+                    Image(systemName: category.icon ?? "folder")
+                        .foregroundColor(Color(hex: category.color ?? "#007AFF"))
+                    
+                    Text(category.name ?? "Unknown")
+                        .foregroundColor(.secondary)
+                }
+            } else {
+                Text("Select Category")
+                    .foregroundColor(.secondary)
+            }
+        }
+    }
+    
+    private var transactionTypeSection: some View {
+        Section {
+            Picker("Type", selection: $viewModel.selectedType) {
+                ForEach(AddTransactionViewModel.TransactionType.allCases, id: \.self) { type in
+                    HStack {
+                        Image(systemName: type.icon)
+                            .foregroundColor(type.color)
+                        Text(type.displayName)
+                    }
+                    .tag(type)
+                }
+            }
+            .pickerStyle(SegmentedPickerStyle())
+            
+            HStack {
+                Text("Amount")
+                Spacer()
+                Text("$")
+                    .foregroundColor(.secondary)
+                TextField("0.00", text: $viewModel.amount)
+                    .keyboardType(.decimalPad)
+                    .multilineTextAlignment(.trailing)
+            }
+        }
+    }
+
+    private var categoryAndDateSection: some View {
+        Section {
+            Button(action: { showingCategoryPicker = true }) {
+                HStack {
+                    Text("Category")
+                        .foregroundColor(.primary)
+                    Spacer()
+                    selectedCategoryView
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+
+            DatePicker("Date", selection: $viewModel.date, displayedComponents: [.date, .hourAndMinute])
+        }
+    }
+
+    private var receiptSection: some View {
+        Section(header: Text("Receipt"), footer: Text("Scan a receipt to automatically extract transaction details")) {
+            Button(action: { showingReceiptScanner = true }) {
+                HStack {
+                    Image(systemName: "camera.fill")
+                        .foregroundColor(.blue)
+                    Text("Scan Receipt")
+                        .foregroundColor(.primary)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+    }
+
+    private var notesSection: some View {
+        Section("Notes") {
+            TextField("Add a note (optional)", text: $viewModel.notes, axis: .vertical)
+                .lineLimit(3...6)
         }
     }
     

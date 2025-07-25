@@ -101,10 +101,10 @@ class AddTransactionViewModel: ObservableObject {
         
         let transaction = Transaction(context: viewContext)
         transaction.id = UUID()
-        transaction.amount = NSDecimalNumber(value: amountValue).decimalValue
+        transaction.amount = NSDecimalNumber(value: amountValue)
         transaction.type = selectedType.rawValue
         transaction.category = category
-        transaction.notes = notes.isEmpty ? nil : notes
+        transaction.note = notes.isEmpty ? nil : notes
         transaction.date = date
         transaction.createdAt = Date()
         transaction.updatedAt = Date()
@@ -139,12 +139,3 @@ class AddTransactionViewModel: ObservableObject {
 }
 
 import SwiftUI
-
-extension AddTransactionViewModel.TransactionType {
-    var color: Color {
-        switch self {
-        case .income: return .green
-        case .expense: return .red
-        }
-    }
-}

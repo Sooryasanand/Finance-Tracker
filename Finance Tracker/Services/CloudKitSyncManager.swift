@@ -83,7 +83,7 @@ class CloudKitSyncManager: ObservableObject {
             .store(in: &cancellables)
         
         // Listen for CloudKit notifications
-        NotificationCenter.default.publisher(for: CKAccountChanged)
+        NotificationCenter.default.publisher(for: .CKAccountChanged)
             .sink { [weak self] _ in
                 self?.checkAccountStatus()
             }
@@ -97,13 +97,13 @@ class CloudKitSyncManager: ObservableObject {
                 case .available:
                     self?.logger.info("iCloud account is available")
                 case .noAccount:
-                    self?.handleSyncError(.accountNotAvailable)
+                    self?.handleSyncError(SyncError.accountNotAvailable)
                 case .restricted:
-                    self?.handleSyncError(.accountNotAvailable)
+                    self?.handleSyncError(SyncError.accountNotAvailable)
                 case .couldNotDetermine:
                     self?.logger.warning("Could not determine iCloud account status")
                 case .temporarilyUnavailable:
-                    self?.handleSyncError(.accountNotAvailable)
+                    self?.handleSyncError(SyncError.accountNotAvailable)
                 @unknown default:
                     self?.logger.error("Unknown iCloud account status")
                 }
@@ -117,9 +117,11 @@ class CloudKitSyncManager: ObservableObject {
         guard !syncStatus.isActive else { return }
         
         logger.info("Starting CloudKit sync")
-        syncStatus = .syncing
-        syncProgress = 0.0
-        errorMessage = nil
+        DispatchQueue.main.async {
+            self.syncStatus = .syncing
+            self.syncProgress = 0.0
+            self.errorMessage = nil
+        }
         
         Task {
             do {
@@ -208,7 +210,7 @@ class CloudKitSyncManager: ObservableObject {
         do {
             _ = try await database.save(record)
             user.lastSyncDate = Date()
-            coreDataStack.save()
+            coreDataStack.saveContext()
         } catch let error as CKError {
             try await handleCloudKitError(error, for: record, entity: user)
         }
@@ -279,14 +281,16 @@ class CloudKitSyncManager: ObservableObject {
         
         record["amount"] = transaction.amount
         record["type"] = transaction.type
-        record["notes"] = transaction.notes
+        record["note"] = transaction.note
         record["date"] = transaction.date
         record["createdAt"] = transaction.createdAt
         record["updatedAt"] = transaction.updatedAt
         
         // Handle receipt image
         if let imageData = transaction.receiptImageData {
-            let asset = CKAsset(data: imageData)
+            let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+            try imageData.write(to: tempURL)
+            let asset = CKAsset(fileURL: tempURL)
             record["receiptImage"] = asset
         }
         
@@ -294,7 +298,7 @@ class CloudKitSyncManager: ObservableObject {
         if let category = transaction.category, let categoryID = category.id {
             let categoryReference = CKRecord.Reference(
                 recordID: CKRecord.ID(recordName: categoryID.uuidString),
-                action: .nullify
+                action: .none
             )
             record["category"] = categoryReference
         }
@@ -310,7 +314,7 @@ class CloudKitSyncManager: ObservableObject {
         do {
             _ = try await database.save(record)
             transaction.syncStatus = "synced"
-            coreDataStack.save()
+            coreDataStack.saveContext()
         } catch let error as CKError {
             transaction.syncStatus = "failed"
             try await handleCloudKitError(error, for: record, entity: transaction)
@@ -347,7 +351,7 @@ class CloudKitSyncManager: ObservableObject {
         if let category = budget.category, let categoryID = category.id {
             let categoryReference = CKRecord.Reference(
                 recordID: CKRecord.ID(recordName: categoryID.uuidString),
-                action: .nullify
+                action: .none
             )
             record["category"] = categoryReference
         }
@@ -450,7 +454,7 @@ class CloudKitSyncManager: ObservableObject {
                 break
             }
             
-            self.coreDataStack.save()
+            self.coreDataStack.saveContext()
         }
         
         logger.info("Successfully resolved conflict with local update")
@@ -479,7 +483,7 @@ class CloudKitSyncManager: ObservableObject {
     private func updateTransactionFromRecord(_ transaction: Transaction, record: CKRecord) {
         transaction.amount = record["amount"] as? NSDecimalNumber
         transaction.type = record["type"] as? String
-        transaction.notes = record["notes"] as? String
+        transaction.note = record["note"] as? String
         transaction.date = record["date"] as? Date
         transaction.updatedAt = record["updatedAt"] as? Date ?? Date()
         transaction.syncStatus = "synced"
@@ -519,7 +523,7 @@ class CloudKitSyncManager: ObservableObject {
         user.lastSyncDate = Date()
         
         if let preferencesData = record["preferences"] as? Data {
-            user.preferences = preferencesData
+            user.preferences = preferencesData as NSObject
         }
     }
     
@@ -534,7 +538,7 @@ class CloudKitSyncManager: ObservableObject {
             for user in users {
                 user.lastSyncDate = Date()
             }
-            coreDataStack.save()
+            coreDataStack.saveContext()
         } catch {
             logger.error("Failed to update user sync date: \(error)")
         }
@@ -561,7 +565,21 @@ class CloudKitSyncManager: ObservableObject {
             syncError = .unknownError(error)
         }
         
-        syncStatus = .failed(syncError)
-        errorMessage = syncError.localizedDescription
+        DispatchQueue.main.async {
+            self.syncStatus = .failed(syncError)
+            self.errorMessage = syncError.localizedDescription
+        }
+    }
+    
+    // MARK: - Public Sync Methods
+    
+    func syncNow() {
+        Task {
+            do {
+                try await performFullSync()
+            } catch {
+                handleSyncError(error)
+            }
+        }
     }
 }

@@ -57,7 +57,7 @@ class CoreDataStack: ObservableObject {
     
     private func setupNotifications() {
         // Listen for CloudKit account changes
-        NotificationCenter.default.publisher(for: CKAccountChanged)
+        NotificationCenter.default.publisher(for: Notification.Name.CKAccountChanged)
             .sink { [weak self] _ in
                 self?.handleCloudKitAccountChange()
             }
@@ -83,7 +83,7 @@ class CoreDataStack: ObservableObject {
         storeDescription.cloudKitContainerOptions = cloudKitOptions
         
         // Set up schema initialization
-        storeDescription.setOption(true as NSNumber, forKey: NSPersistentCloudKitContainerEventChangedHistoryOptionKey)
+        storeDescription.setOption(true as NSNumber, forKey: "NSPersistentCloudKitContainerEventChangedHistoryOptionKey")
     }
     
     private func configureStoreOptions(_ storeDescription: NSPersistentStoreDescription) {
@@ -386,6 +386,31 @@ class CoreDataStack: ObservableObject {
             
             // Trigger lazy initialization
             _ = self?.persistentContainer
+        }
+    }
+    
+    // MARK: - Data Refresh
+    
+    func refreshData() async {
+        logger.info("Refreshing Core Data context")
+        
+        await MainActor.run {
+            context.refreshAllObjects()
+        }
+    }
+    
+    // MARK: - Context Save
+    
+    func saveContext() {
+        let context = persistentContainer.viewContext
+        if context.hasChanges {
+            do {
+                try context.save()
+                logger.debug("Context saved successfully")
+            } catch {
+                logger.error("Failed to save context: \(error)")
+                errorMessage = "Failed to save data: \(error.localizedDescription)"
+            }
         }
     }
     

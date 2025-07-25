@@ -4,9 +4,7 @@ import Foundation
 // MARK: - Transaction Extensions
 extension Transaction {
     
-    override public func awakeFromInsert() {
-        super.awakeFromInsert()
-        
+    public func setupDefaults() {
         let now = Date()
         self.id = UUID()
         self.createdAt = now
@@ -19,10 +17,8 @@ extension Transaction {
         }
     }
     
-    override public func willSave() {
-        super.willSave()
-        
-        if isUpdated && !isDeleted {
+    public func updateTimestamp() {
+        if hasChanges && !isDeleted {
             self.updatedAt = Date()
             self.syncStatus = "pending"
         }
@@ -59,8 +55,8 @@ extension Transaction {
             throw ValidationError.invalidDate("Transaction date cannot be in the future")
         }
         
-        // Validate notes length
-        if let notes = self.notes, notes.count > 500 {
+        // Validate note length
+        if let note = self.note, note.count > 500 {
             throw ValidationError.invalidNotes("Notes cannot exceed 500 characters")
         }
         
@@ -99,9 +95,7 @@ extension Transaction {
 // MARK: - Category Extensions
 extension Category {
     
-    override public func awakeFromInsert() {
-        super.awakeFromInsert()
-        
+    public func setupDefaults() {
         let now = Date()
         self.id = UUID()
         self.createdAt = now
@@ -122,10 +116,8 @@ extension Category {
         }
     }
     
-    override public func willSave() {
-        super.willSave()
-        
-        if isUpdated && !isDeleted {
+    public func updateTimestamp() {
+        if hasChanges && !isDeleted {
             self.updatedAt = Date()
         }
     }
@@ -193,9 +185,7 @@ extension Category {
 // MARK: - Budget Extensions
 extension Budget {
     
-    override public func awakeFromInsert() {
-        super.awakeFromInsert()
-        
+    public func setupDefaults() {
         let now = Date()
         self.id = UUID()
         self.createdAt = now
@@ -208,10 +198,8 @@ extension Budget {
         }
     }
     
-    override public func willSave() {
-        super.willSave()
-        
-        if isUpdated && !isDeleted {
+    public func updateTimestamp() {
+        if hasChanges && !isDeleted {
             self.updatedAt = Date()
         }
         
@@ -352,9 +340,7 @@ extension Budget {
 // MARK: - User Extensions
 extension User {
     
-    override public func awakeFromInsert() {
-        super.awakeFromInsert()
-        
+    public func setupDefaults() {
         let now = Date()
         self.id = UUID()
         self.createdAt = now
@@ -365,10 +351,8 @@ extension User {
         }
     }
     
-    override public func willSave() {
-        super.willSave()
-        
-        if isUpdated && !isDeleted {
+    public func updateTimestamp() {
+        if hasChanges && !isDeleted {
             self.updatedAt = Date()
         }
     }

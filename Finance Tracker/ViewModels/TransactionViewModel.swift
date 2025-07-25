@@ -77,7 +77,7 @@ class TransactionViewModel: ObservableObject {
         filteredTransactions = transactions.filter { transaction in
             let matchesSearch = searchText.isEmpty ||
                 transaction.category?.name?.localizedCaseInsensitiveContains(searchText) == true ||
-                transaction.notes?.localizedCaseInsensitiveContains(searchText) == true
+                transaction.note?.localizedCaseInsensitiveContains(searchText) == true
             
             let matchesFilter = selectedFilter == .all || transaction.type == selectedFilter.rawValue.lowercased()
             

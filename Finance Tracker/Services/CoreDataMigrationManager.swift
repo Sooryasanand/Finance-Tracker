@@ -162,10 +162,10 @@ class CoreDataMigrationManager {
             from: sourceURL,
             sourceType: NSSQLiteStoreType,
             options: options,
-            to: targetURL,
+            with: mappingModel,
+            toDestinationURL: targetURL,
             destinationType: NSSQLiteStoreType,
-            destinationOptions: options,
-            with: mappingModel
+            destinationOptions: options
         )
     }
     

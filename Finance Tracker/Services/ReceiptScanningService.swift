@@ -74,7 +74,7 @@ class ReceiptScanningService: ObservableObject {
         return receiptData
     }
     
-    private func performTextRecognition(on cgImage: CGImage) async throws -> VNRecognizeTextObservation {
+    private func performTextRecognition(on cgImage: CGImage) async throws -> [VNRecognizedTextObservation] {
         return try await withCheckedThrowingContinuation { continuation in
             let request = VNRecognizeTextRequest { request, error in
                 if let error = error {
@@ -82,19 +82,13 @@ class ReceiptScanningService: ObservableObject {
                     return
                 }
                 
-                guard let observations = request.results as? [VNRecognizeTextObservation],
+                guard let observations = request.results as? [VNRecognizedTextObservation],
                       !observations.isEmpty else {
                     continuation.resume(throwing: ScanError.noTextFound)
                     return
                 }
                 
-                // Combine all observations into one for processing
-                let combinedObservation = observations.reduce(VNRecognizeTextObservation()) { result, observation in
-                    // This is a simplified combination - in practice, you'd want to preserve spatial relationships
-                    return observation
-                }
-                
-                continuation.resume(returning: combinedObservation)
+                continuation.resume(returning: observations)
             }
             
             // Configure the request for better receipt recognition
@@ -117,22 +111,30 @@ class ReceiptScanningService: ObservableObject {
         }
     }
     
-    private func parseReceiptData(from observation: VNRecognizeTextObservation) throws -> ReceiptData {
-        guard let recognizedText = try? observation.topCandidates(1).first?.string else {
+    private func parseReceiptData(from observations: [VNRecognizedTextObservation]) throws -> ReceiptData {
+        let allText = observations.compactMap { observation in
+            try? observation.topCandidates(1).first?.string
+        }.joined(separator: "\n")
+        
+        guard !allText.isEmpty else {
             throw ScanError.textRecognitionFailed
         }
         
-        let confidence = observation.topCandidates(1).first?.confidence ?? 0.0
+        let confidences = observations.compactMap { observation -> Double? in
+            guard let confidence = try? observation.topCandidates(1).first?.confidence else { return nil }
+            return Double(confidence)
+        }
+        let averageConfidence = confidences.isEmpty ? 0.0 : confidences.reduce(0.0) { $0 + $1 } / Double(confidences.count)
         
         // Require minimum confidence threshold
-        guard confidence > 0.6 else {
+        guard averageConfidence > 0.6 else {
             throw ScanError.lowConfidence
         }
         
-        logger.debug("Recognized text: \(recognizedText)")
-        logger.debug("Confidence: \(confidence)")
+        logger.debug("Recognized text: \(allText)")
+        logger.debug("Confidence: \(averageConfidence)")
         
-        let lines = recognizedText.components(separatedBy: .newlines)
+        let lines = allText.components(separatedBy: .newlines)
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
         
@@ -149,8 +151,8 @@ class ReceiptScanningService: ObservableObject {
             merchantName: merchantName,
             amount: amount,
             date: date,
-            rawText: recognizedText,
-            confidence: confidence
+            rawText: allText,
+            confidence: Float(averageConfidence)
         )
     }
     
